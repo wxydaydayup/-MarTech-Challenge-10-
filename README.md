@@ -633,23 +633,3 @@ for selected in selected_cols:
         test_features[selected+'1'] = test_features[selected].apply(f, args = (selected,))
         print(selected+'1 created')
 ```
-
-## BaseLine V6_ctb--分数: 88.946
-
-在树模型选择上，本赛题个人尝试使用过LightGBM和XGBoost但效果都没有Catboost模型好。
-
-Catboost（ Categorical Features+Gradient Boosting）采用的策略在降低过拟合的同时保证所有数据集都可用于学习。性能卓越、鲁棒性与通用性更好、易于使用而且更实用。据其介绍 Catboost 的性能可以匹敌任何先进的机器学习算法，其具有以下优势：
-
-（1）CatBoost 提供了比 XGBoost 更高的准确性和和更短的训练时间；
-
-（2）支持即用的分类特征，因此我们不需要对分类特征进行预处理（例如，通过 LabelEncoding 或 OneHotEncoding）。事实上，CatBoost 的文档明确地说明不要在预处理期间使用热编码，因为“这会影响训练速度和最终的效果”；
-
-（3）通过执行有序地增强操作，可以更好地处理过度拟合，尤其体现在小数据集上；
-
-（4）支持即用的 GPU 训练（只需设置参数task_type =“GPU”）；
-
-（5）可以处理缺失的值；
-
-
-
-## Optimization V1--分数: 88.946
