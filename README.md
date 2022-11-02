@@ -1,22 +1,5 @@
 # Baidu_MarTechChallenge
 飞桨：MarTech Challenge 点击反欺诈预测
----
-title: 飞桨-点击反欺诈预测
-tags:
-  - 机器学习
-  - 数据分析
-author: WangXinYi
-img: https://tc.phpx.cn/uploads/2022/11/01/reopfBexsD.jpg
-top: false
-summary: 百度飞桨-MarTechChallenge点击反欺诈预测
-categories:
-  - 机器学习
-  - 数据分析
-typora-root-url: ..
-date: 2022-10-24 12:06:57
----
-
-# 飞桨-点击反欺诈预测
 
 ## 赛题说明
 
