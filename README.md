@@ -1,4 +1,4 @@
-# Baidu_MarTechChallenge
+# 【飞桨学习赛：MarTech Challenge 点击反欺诈预测】第10名方案
 飞桨：MarTech Challenge 点击反欺诈预测
 
 ## 赛题说明
