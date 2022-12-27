@@ -633,3 +633,196 @@ for selected in selected_cols:
         test_features[selected+'1'] = test_features[selected].apply(f, args = (selected,))
         print(selected+'1 created')
 ```
+## 最终版本 Best_CatBoost--分数: 89.1093
+```python
+#best版本-89.1093分数
+import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
+
+# 数据加载和去除Unnameed字段
+train = pd.read_csv('./train.csv')
+test = pd.read_csv('./test1.csv')
+train = train.iloc[:, 1:]
+test = test.iloc[:,1:]
+res = pd.DataFrame(test['sid'])
+
+# 去除数据探索发现问题的字段
+col = train.columns.tolist()
+remove_list = ['lan', 'os','label', 'sid']
+for i in remove_list:
+    col.remove(i)
+features = train[col]
+test_features = test[col]
+
+# 对osv进行数据清洗
+def osv_trans(x):
+    x = str(x).replace('Android_', '').replace('Android ', '').replace('W', '')
+    if str(x).find('.')>0:
+        temp_index1 = x.find('.')
+        if x.find(' ')>0:
+            temp_index2 = x.find(' ')
+        else:
+            temp_index2 = len(x)
+ 
+        if x.find('-')>0:
+            temp_index2 = x.find('-')
+            
+        result = x[0:temp_index1] + '.' + x[temp_index1+1:temp_index2].replace('.', '')
+        try:
+            return float(result)
+        except:
+            print('有错误: '+x)
+            return 0
+    try:
+        return float(x)
+    except:
+        print('有错误: '+x)
+        return 0
+features['osv'].fillna('8.1.0', inplace=True)
+features['osv'] = features['osv'].apply(osv_trans)
+test_features['osv'].fillna('8.1.0', inplace=True)
+test_features['osv'] = test_features['osv'].apply(osv_trans)
+
+# 对timestamp进行数据清洗与特征变换,
+from datetime import datetime
+features['timestamp'] = features['timestamp'].apply(lambda x: datetime.fromtimestamp(x/1000))
+test_features['timestamp'] = test_features['timestamp'].apply(lambda x: datetime.fromtimestamp(x/1000))
+temp = pd.DatetimeIndex(features['timestamp'])
+features['year'] = temp.year
+features['month'] = temp.month
+features['day'] = temp.day
+features['hour'] = temp.hour
+features['minute'] = temp.minute
+features['week_day'] = temp.weekday #星期几
+start_time = features['timestamp'].min()
+features['time_diff'] = features['timestamp'] - start_time
+features['time_diff'] = features['time_diff'].dt.days + features['time_diff'].dt.seconds/3600/24
+temp = pd.DatetimeIndex(test_features['timestamp'])
+test_features['year'] = temp.year
+test_features['month'] = temp.month
+test_features['day'] = temp.day
+test_features['hour'] = temp.hour
+test_features['minute'] = temp.minute
+test_features['week_day'] = temp.weekday #星期几 
+test_features['time_diff'] = test_features['timestamp'] - start_time
+test_features['time_diff'] = test_features['time_diff'].dt.days + test_features['time_diff'].dt.seconds/3600/24
+features = features.drop(['timestamp'],axis = 1)
+test_features = test_features.drop(['timestamp'],axis = 1)
+
+# 对version进行数据清洗与特征变换
+def version_trans(x):
+    if x=='V3':
+        return 3
+    if x=='v1':
+        return 1
+    if x=='P_Final_6':
+        return 6
+    if x=='V6':
+        return 6
+    if x=='GA3':
+        return 3
+    if x=='GA2':
+        return 2
+    if x=='V2':
+        return 2
+    if x=='50':
+        return 5
+    return int(x)
+features['version'] = features['version'].apply(version_trans)
+test_features['version'] = test_features['version'].apply(version_trans)
+features['version'] = features['version'].astype('int')
+test_features['version'] = test_features['version'].astype('int')
+
+# 对lan进行数据清洗与特征变换 对于有缺失的lan 设置为22    
+lan_map = {'zh-CN': 1, 'zh_CN':2, 'Zh-CN': 3, 'zh-cn': 4, 'zh_CN_#Hans':5, 'zh': 6, 'ZH': 7, 'cn':8, 'CN':9, 'zh-HK': 10, 'tw': 11, 'TW': 12, 'zh-TW': 13,             'zh-MO':14, 'en':15, 'en-GB': 16, 'en-US': 17, 'ko': 18, 'ja': 19, 'it': 20, 'mi':21} 
+train['lan'] = train['lan'].map(lan_map)
+test['lan'] = test['lan'].map(lan_map)
+train['lan'].fillna(22, inplace=True)
+test['lan'].fillna(22, inplace=True)
+
+# 构造面积特征和构造相除特征
+features['dev_area'] = features['dev_height'] * features['dev_width']
+test_features['dev_area'] = test_features['dev_height'] * test_features['dev_width']
+features['dev_rato'] = features['dev_height'] / features['dev_width']
+test_features['dev_rato'] = test_features['dev_height'] / test_features['dev_width']
+# APP版本与操作系统版本差
+features['version_osv'] = features['osv'] - features['version']
+test_features['version_osv'] = test_features['osv'] - test_features['version']
+
+# 对fea_hash与fea1_hash特征变换
+features['fea_hash_len'] = features['fea_hash'].map(lambda x: len(str(x)))
+features['fea1_hash_len'] = features['fea1_hash'].map(lambda x: len(str(x)))
+features['fea_hash'] = features['fea_hash'].map(lambda x: 0 if len(str(x))>16 else int(x))
+features['fea1_hash'] = features['fea1_hash'].map(lambda x: 0 if len(str(x))>16 else int(x))
+test_features['fea_hash_len'] = test_features['fea_hash'].map(lambda x: len(str(x)))
+test_features['fea1_hash_len'] = test_features['fea1_hash'].map(lambda x: len(str(x)))
+test_features['fea_hash'] = test_features['fea_hash'].map(lambda x: 0 if len(str(x))>16 else int(x))
+test_features['fea1_hash'] = test_features['fea1_hash'].map(lambda x: 0 if len(str(x))>16 else int(x))
+
+#通过特征比，寻找关键特征，构造新特征，新特征字段 = 原始特征字段 + 1
+def find_key_feature(train, selected):
+    temp = pd.DataFrame(columns = [0,1])
+    temp0 = train[train['label'] == 0]
+    temp1 = train[train['label'] == 1]
+    temp[0] = temp0[selected].value_counts() / len(temp0) * 100
+    temp[1] = temp1[selected].value_counts() / len(temp1) * 100
+    temp[2] = temp[1] / temp[0]
+    #选出大于10倍的特征
+    result = temp[temp[2] > 10].sort_values(2, ascending = False).index
+    return result
+selected_cols = ['osv','apptype', 'carrier', 'dev_height', 'dev_ppi','dev_width', 'media_id', 
+                 'package', 'version', 'fea_hash', 'location', 'fea1_hash','cus_type']
+key_feature = {}
+for selected in selected_cols:
+    key_feature[selected] = find_key_feature(train, selected)
+def f(x, selected):
+    if x in key_feature[selected]:
+        return 1
+    else:
+        return 0
+for selected in selected_cols:
+    if len(key_feature[selected]) > 0:
+        features[selected+'1'] = features[selected].apply(f, args = (selected,))
+        test_features[selected+'1'] = test_features[selected].apply(f, args = (selected,))
+        print(selected+'1 created')
+
+#CatBoost模型
+from catboost import CatBoostClassifier
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import roc_auc_score
+model=CatBoostClassifier(
+            loss_function="Logloss",
+            eval_metric="AUC",
+            task_type="GPU",
+            learning_rate=0.1,
+            iterations=1000,
+            random_seed=2021,
+            od_type="Iter",
+            depth=7)
+
+n_folds =10 #十折交叉校验
+answers = []
+mean_score = 0
+data_x=features
+data_y=train['label']
+sk = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=2021)
+all_test = test_features.copy()
+for train, test in sk.split(data_x, data_y):  
+    x_train = data_x.iloc[train]
+    y_train = data_y.iloc[train]
+    x_test = data_x.iloc[test]
+    y_test = data_y.iloc[test]
+    clf = model.fit(x_train,y_train, eval_set=(x_test,y_test),verbose=500) # 500条打印一条日志
+    
+    yy_pred_valid=clf.predict(x_test,prediction_type='Probability')[:,-1]
+    print('cat验证的auc:{}'.format(roc_auc_score(y_test, yy_pred_valid)))
+    mean_score += roc_auc_score(y_test, yy_pred_valid) / n_folds
+    
+    y_pred_valid = clf.predict(all_test,prediction_type='Probability')[:,-1]
+    answers.append(y_pred_valid) 
+print('mean valAuc:{}'.format(mean_score))
+cat_pre=sum(answers)/n_folds
+res['label']=[1 if x>=0.5 else 0 for x in cat_pre]
+res.to_csv('./LiJing.csv',index=False)
+```
